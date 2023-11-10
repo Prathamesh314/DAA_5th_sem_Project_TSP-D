@@ -78,7 +78,7 @@ Ts = 10 # Speed of Truck
 Ds = 20 # Speed of Drone
 
 alpha = 1 # GA-AS constant
-beta = 5  # GA-AS constant
+beta = 1 # GA-AS constant
 decay = 0.95  # GA-AS constant
 
 
@@ -95,6 +95,12 @@ ditances_matrix = np.array([
     [4, 29, 23, 25, 20, 36, 101, 15, 0, 35],
     [31, 41, 27, 13, 16, 3, 99, 25, 35, 0]
 ])
+
+# Truck cost matrix
+Truck_Cost = ditances_matrix * (1/Ts)
+
+# Drone cost matrix
+Drone_Cost = ditances_matrix * (1/Ds)
 
 # List of Directed edges for transppoprtation
 edges = [
@@ -155,12 +161,9 @@ def find_best_path(num_of_iters):
         ants = [(path, cost)]
         spread_pheromone(ants)
         Pt * decay
-        # current_path = ants[0]
-        # current_cost = ants[1]
         if cost < all_time_best_distance:
             best_path = path
             all_time_best_distance = cost
-        # print(ants)
     return best_path, all_time_best_distance
 
 
@@ -183,6 +186,7 @@ def choose_next_city(start, unvisited):
     next_city = np.random.choice(list(unvisited), p=probabilities)
     return next_city
 
+
 # Main function to generate ant path from starting point 0
 def generate_ant_path(start):
 
@@ -197,12 +201,11 @@ def generate_ant_path(start):
         next_city = choose_next_city(ant_path[-1], unvisited)
         ant_path.append(next_city)
         unvisited.remove(next_city)
-    ant_path.append(start)
     cost = calculate_path_distance(ant_path)
-        
+    ant_path.append(start)
     return ant_path, cost
 
-def calculate_path_distance( path):
+def calculate_path_distance(path):
     total_distance = 0
     for i in range(len(path) - 1):
         total_distance += ditances_matrix[path[i]][path[i + 1]]
@@ -227,7 +230,29 @@ def tsp(i, start, s):
             path = rpath
     return ans, path
 
+def fitness_measurement(path):
+    total_cost = 0
+    for i in range(len(path) - 1):
+        if transportation_array[path[i+1]] == 3 or transportation_array[path[i+1]] == 1:
+            total_cost += Truck_Cost[path[i]][path[i+1]]
+        elif transportation_array[path[i+1]] == 4:
+            total_cost += (Drone_Cost[path[i]][path[i+1]]*2)
+        else:
+            total_cost += max(Truck_Cost[path[i]][path[i+1]], Drone_Cost[path[i]][path[i+1]])
+    return total_cost, 1/total_cost
 
-path, distance = find_best_path(100)
-print(f"Best Path: {path}")
-print(f"Best distance: {distance}")
+
+best_path = None
+best_distance = float('inf')
+
+for i in range(100):
+    path, distance = find_best_path(100)
+    if distance < best_distance:
+        best_distance = distance
+        best_path = path
+total_time, fitness = fitness_measurement(best_path)
+print(f"Best Path: {best_path}")
+print(f"Total cost: {best_distance}")
+print(f"Total time: {total_time} s")
+print(f"Fitness measurement: {fitness}")
+
