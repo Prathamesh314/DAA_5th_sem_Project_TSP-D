@@ -96,141 +96,102 @@ ditances_matrix = np.array([
     [31, 41, 27, 13, 16, 3, 99, 25, 35, 0]
 ])
 
-# Truck cost matrix
-Truck_Cost = ditances_matrix * (1/Ts)
 
-# Drone cost matrix
-Drone_Cost = ditances_matrix * (1/Ds)
+class AntColony:
+    def __init__(self,distances, n_ants, decay, alpha, beta, speed) -> None:
+        self.distances = distances
+        self.pheromone = np.ones_like(distances) / len(distances)
+        self.all_inds = range(len(distances))
+        self.n_ants = n_ants
+        self.decay = decay
+        self.alpha = alpha
+        self.beta = beta
+        self.speed = speed
+        self.tcost = self.distances * (1/self.speed)
+    
+    def run(self, n_iterations):
+        best_path = None
+        all_time_best_distance = float('inf')
 
-# List of Directed edges for transppoprtation
-edges = [
-    (1,4),
-    (4,0),
-    (4,7),
-    (7,0),
-    (0,8),
-    (8,2),
-    (2,6),
-    (6,2),
-    (2,5),
-    (2,3),
-    (3,9),
-    (5,9),
-    (9,1),
-]
+        for i in range(n_iterations):
+            ants = self.generate_ants()
+            self.spread_pheromone(ants)
+            self.pheromone * self.decay
 
-adj = {}
+            current_best_path, current_best_distance = self.get_best_path(ants)
 
-TDarray = {}
-DDarray = {}
+            if current_best_distance < all_time_best_distance:
+                best_path = current_best_path
+                all_time_best_distance = current_best_distance
+        return best_path, all_time_best_distance
 
+    def generate_ants(self):
+        ants = []
+        for ant in range(self.n_ants):
+            start = 0
+            ant_path = self.generate_ant_path(start)
+            ants.append((ant_path, self.calculate_path_distance(ant_path)))
+        return ants
 
-# Initializing Visitied array for Truck and Drone
-Drone_visited = np.zeros(len(population))
-Truck_visited = np.zeros(len(population))
-Drone_visited[depot_point] = Truck_visited[depot_point] = 1  # Started point [depot] is 0 so marking it as 1
+    def generate_ant_path(self, start):
+        ant_path = []
+        unvisited = set(self.all_inds)
+        unvisited.remove(start)
+        ant_path.append(start)
 
-# Creating Adjacency list for given graph
-for i in edges:
-    a = i[0]
-    b = i[1]
-    if population[a] == 0 and population[b]==0: # Path is travelled only by truck
-        if a in TDarray:
-            TDarray[a].append(b)
-        else:
-            l = [b]
-            TDarray[a] = l
-    else:  # Path is travelled only by Drone
-        if a in DDarray:
-            DDarray[a].append(b)
-        else:
-            l = [b]
-            DDarray[a] = l
+        while unvisited:
+            new_unvisited = []
+            if transportation_array[ant_path[-1]] == 1:
+                new_unvisited = list(filter(lambda x:transportation_array[x]==1 or transportation_array[x]==3,unvisited))
+            elif transportation_array[ant_path[-1]] == 2:
+                new_unvisited = list(filter(lambda x:transportation_array[x]==3, unvisited))
+            elif transportation_array[ant_path[-1]] == 3:
+                new_unvisited = list(filter(lambda x: transportation_array[x]!=1,unvisited))
+            else:
+                new_unvisited = list(filter(lambda x:transportation_array[x]==3 or transportation_array[x]==2, unvisited))
+            
+            next_city = None
+            if len(new_unvisited):
+                next_city = self.choose_next_city(ant_path[-1], new_unvisited)
+            else:
+                next_city = self.choose_next_city(ant_path[-1], unvisited)
+            ant_path.append(next_city)
+            unvisited.remove(next_city)
+        ant_path.append(start)
+        return ant_path
 
+    def choose_next_city(self, current_city, unvisited):
+        pheromone_values = self.pheromone[current_city, list(unvisited)]
+        heuristic_values = 1 / (self.distances[current_city, list(unvisited)] + 1e-10)
+        probabilities = (pheromone_values ** self.alpha) * (heuristic_values ** self.beta)
+        probabilities /= probabilities.sum()
+        next_city = np.random.choice(list(unvisited), p=probabilities)
+        return next_city
 
-# Step 1. Initially 1/n is assigned to each Ptij [Truck] and Pdij [Drone]
-Pt = np.ones_like(ditances_matrix)/len(ditances_matrix)  # Truck pheromone matrix, initialized with 1/n
-Pd = np.ones_like(ditances_matrix)/len(ditances_matrix)  # Drone pheromone matrix, initialized with 1/n
+    def spread_pheromone(self, ants):
+        pheromone_change = np.zeros_like(self.pheromone)
+        for ant_path, distance in ants:
+            for i in range(len(ant_path) - 1):
+                pheromone_change[ant_path[i], ant_path[i + 1]] += 1 / distance
+                pheromone_change[ant_path[i + 1], ant_path[i]] += 1 / distance
+        self.pheromone = (1 - self.decay) * self.pheromone + pheromone_change
 
+    def get_best_path(self, ants):
+        best_path = None
+        best_distance = float('inf')
+        for ant_path, distance in ants:
+            if distance < best_distance:
+                best_path = ant_path
+                best_distance = distance
+        return best_path, best_distance
 
-def find_best_path(num_of_iters):
-    best_path = None
-    all_time_best_distance = float('inf')
-    for i in range(num_of_iters):
-        path, cost = generate_ant_path(0)
-        ants = [(path, cost)]
-        spread_pheromone(ants)
-        Pt * decay
-        if cost < all_time_best_distance:
-            best_path = path
-            all_time_best_distance = cost
-    return best_path, all_time_best_distance
+    def calculate_path_distance(self, path):
+        total_distance = 0
+        for i in range(len(path) - 1):
+            total_distance += self.tcost[path[i]][path[i + 1]]
+        return total_distance 
 
-
-def spread_pheromone(ants):
-    global Pt
-    pheromone_change = np.zeros_like(Pt)
-    for ant_path, distance in ants:
-        for i in range(len(ant_path) - 1):
-            pheromone_change[ant_path[i], ant_path[i + 1]] += 1 / distance
-            pheromone_change[ant_path[i + 1], ant_path[i]] += 1 / distance
-    Pt = (1 - decay) * Pt + pheromone_change
-
-
-# Function to choose next city with probability function
-def choose_next_city(start, unvisited):
-    pheromone_values = Pt[start, list(unvisited)]
-    heuristic_values = 1 / (ditances_matrix[start, list(unvisited)] + 1e-10)
-    probabilities = ( pheromone_values ** alpha ) * ( heuristic_values ** beta )
-    probabilities /= probabilities.sum()
-    next_city = np.random.choice(list(unvisited), p=probabilities)
-    return next_city
-
-
-# Main function to generate ant path from starting point 0
-def generate_ant_path(start):
-
-    '''
-    Generate an ant path with given start position
-    '''
-    ant_path = []
-    unvisited = set(range(len(population)))
-    unvisited.remove(start)
-    ant_path.append(start)
-    while unvisited:
-        next_city = choose_next_city(ant_path[-1], unvisited)
-        ant_path.append(next_city)
-        unvisited.remove(next_city)
-    cost = calculate_path_distance(ant_path)
-    ant_path.append(start)
-    return ant_path, cost
-
-def calculate_path_distance(path):
-    total_distance = 0
-    for i in range(len(path) - 1):
-        total_distance += ditances_matrix[path[i]][path[i + 1]]
-    return total_distance
-
-def tsp(i, start, s):
-
-    if len(s) == 0:
-        return ditances_matrix[i][start], [start]
-
-    ans = 1e9
-    path = []
-
-    for j in s:
-        s.remove(j)
-        cost, rpath = tsp(j,start,s)
-        s.add(j)
-        cost += ditances_matrix[i][j]
-        rpath.append(j)
-        if cost < ans:
-            ans = cost
-            path = rpath
-    return ans, path
-
-def fitness_measurement(path):
+def fitness_measurement(path,Truck_Cost, Drone_Cost):
     total_cost = 0
     for i in range(len(path) - 1):
         if transportation_array[path[i+1]] == 3 or transportation_array[path[i+1]] == 1:
@@ -239,20 +200,48 @@ def fitness_measurement(path):
             total_cost += (Drone_Cost[path[i]][path[i+1]]*2)
         else:
             total_cost += max(Truck_Cost[path[i]][path[i+1]], Drone_Cost[path[i]][path[i+1]])
-    return total_cost, 1/total_cost
+    return  1/total_cost
 
+def Type_Matrix(path):
+    arr = []
+    for i in path:
+        arr.append(transportation_array[i])
+    return arr
 
-best_path = None
-best_distance = float('inf')
+def Total_cost(path, Tcost, Dcost):
+    total_cost = 0
+    for i in range(len(path)-1):
+        if transportation_array[path[i+1]] == 3 or transportation_array[path[i+1]] == 1:
+            total_cost += Tcost[path[i]][path[i+1]]
+        elif transportation_array[path[i+1]] == 4:
+            total_cost += (Dcost[path[i]][path[i+1]])*2
+        else:
+            total_cost += max(Tcost[path[i]][path[i+1]], Dcost[path[i]][path[i+1]])
+    return total_cost
 
-for i in range(100):
-    path, distance = find_best_path(100)
-    if distance < best_distance:
-        best_distance = distance
-        best_path = path
-total_time, fitness = fitness_measurement(best_path)
-print(f"Best Path: {best_path}")
-print(f"Total cost: {best_distance}")
-print(f"Total time: {total_time} s")
-print(f"Fitness measurement: {fitness}")
+Truck = AntColony(ditances_matrix, 5, decay, alpha, beta, Ts)
+Drone = AntColony(ditances_matrix, 5, decay, alpha, beta, Ds)
 
+best_truck_path, best_truck_time = Truck.run(100)
+best_drone_path, best_drone_time = Drone.run(100)
+
+fitness_truck = fitness_measurement(best_truck_path, Truck.tcost, Drone.tcost)
+fitness_drone = fitness_measurement(best_drone_path, Truck.tcost, Drone.tcost)
+
+truck_type = Type_Matrix(best_truck_path)
+drone_type = Type_Matrix(best_drone_path)
+
+TotalCost = Total_cost(best_truck_path, Truck.tcost, Drone.tcost)
+Totalcost1 = Total_cost(best_drone_path, Truck.tcost, Drone.tcost)
+
+print(f"Best Truck distance: {best_truck_time} s")
+print(f"Best Truck Path: {best_truck_path}")
+print(f"Truck Fitness: {fitness_truck}")
+print(f"Truck Type Matrix: {truck_type}")
+print(f"Total cost if we take Truck path: {TotalCost}")
+print()
+print(f"Best Drone distance: {best_drone_time} s")
+print(f"Best Drone path: {best_drone_path}")
+print(f"Drone Fitness: {fitness_drone}")
+print(f"Drone Type Matrix: {drone_type}")
+print(f"Total cost if we take drone pathe: {Totalcost1}")
