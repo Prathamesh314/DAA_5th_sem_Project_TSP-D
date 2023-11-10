@@ -4,7 +4,6 @@ class AntColony:
     def __init__(self, distances, n_ants, decay, alpha=1, beta=1):
         self.distances = distances
         self.pheromone = np.ones_like(distances) / len(distances)
-        # print(self.pheromone)
         self.all_inds = range(len(distances))
         self.n_ants = n_ants
         self.decay = decay
