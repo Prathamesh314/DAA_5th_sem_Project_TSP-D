@@ -83,7 +83,7 @@ decay = 0.95  # GA-AS constant
 
 
 # Created distance matrix for 10 customers
-ditances_matrix = np.array([
+distance_matrix = np.array([
     [0, 29, 20, 21, 16, 31, 100, 12, 4, 31],
     [29, 0, 15, 29, 28, 40, 72, 21, 29, 41],
     [20, 15, 0, 15, 14, 25, 81, 9, 23, 27],
@@ -95,6 +95,22 @@ ditances_matrix = np.array([
     [4, 29, 23, 25, 20, 36, 101, 15, 0, 35],
     [31, 41, 27, 13, 16, 3, 99, 25, 35, 0]
 ])
+
+def tsp(i, start, s):
+    if len(s) == 0:
+        return [start], distance_matrix[i][start]
+    ans = 1e9
+    path = []
+    for j in s:
+        s.remove(j)
+        rpath, cost = tsp(j, start, s)
+        s.add(j)
+        cost += distance_matrix[i][j]
+        rpath.append(j)
+        if cost < ans:
+            ans = cost
+            path = rpath
+    return path, ans
 
 
 class AntColony:
@@ -219,8 +235,8 @@ def Total_cost(path, Tcost, Dcost):
             total_cost += max(Tcost[path[i]][path[i+1]], Dcost[path[i]][path[i+1]])
     return total_cost
 
-Truck = AntColony(ditances_matrix, 5, decay, alpha, beta, Ts)
-Drone = AntColony(ditances_matrix, 5, decay, alpha, beta, Ds)
+Truck = AntColony(distance_matrix, 5, decay, alpha, beta, Ts)
+Drone = AntColony(distance_matrix, 5, decay, alpha, beta, Ds)
 
 best_truck_path, best_truck_time = Truck.run(100)
 best_drone_path, best_drone_time = Drone.run(100)
