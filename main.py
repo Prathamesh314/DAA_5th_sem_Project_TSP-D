@@ -74,6 +74,11 @@ transportation_array = [1, 3, 3, 1, 3, 2, 4, 2, 3, 1]
 depot_point = 0
 tsp_set = set(range(len(population)))
 
+l = [0]*(len(population)-len(truck))
+truck.extend(l)
+l = [0]*(len(population)-len(drone))
+drone.extend(l)
+
 Ts = 10 # Speed of Truck
 Ds = 20 # Speed of Drone
 
