@@ -44,7 +44,7 @@ class AntColony:
         for i in range(n_iterations):
             ants = self.generate_ants()
             self.spread_pheromone(ants)
-            self.pheromone * self.decay
+            self.pheromone  = self.pheromone * self.decay
             current_best_path, current_best_distance = self.get_best_path(ants)
             if current_best_distance < all_time_best_distance:
                 best_path = current_best_path
@@ -53,7 +53,7 @@ class AntColony:
 
     def generate_ants(self):
         ants = []
-        for ant in range(self.n_ants):
+        for _ in range(self.n_ants):
             start = 0
             ant_path = self.generate_ant_path(start)
             ants.append((ant_path, self.calculate_path_distance(ant_path)))
