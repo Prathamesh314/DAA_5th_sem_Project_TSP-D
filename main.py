@@ -68,8 +68,8 @@
 import numpy as np
 
 population = [0, 0, 0, 0, 0, 1, 1, 1, 0, 0]
-truck = [i+1 for i in range(len(population)) if population[i]==0]
-drone = [i+1 for i in range(len(population)) if population[i]==1]
+truck = [i for i in range(len(population)) if population[i]==0]
+drone = [i for i in range(len(population)) if population[i]==1]
 transportation_array = [1, 3, 3, 1, 3, 2, 4, 2, 3, 1]
 depot_point = 0
 tsp_set = set(range(len(population)))
@@ -101,6 +101,87 @@ distance_matrix = np.array([
     [31, 41, 27, 13, 16, 3, 99, 25, 35, 0]
 ])
 
+
+
+import numpy as np
+
+import random 
+
+POPULATION_SIZE = 100
+
+GENES = [0,1,2,3,4,5,6,7,8,9,10]
+ 
+TARGET = [0, 8, 7, 2, 1, 6, 5, 9, 3, 4, 0]
+
+class Genetic(object):
+    def __init__(self, chromosome) -> None:
+        self.chromosome = chromosome
+        self.fitness = self.cal_fitness()
+    
+    @classmethod
+    def mutate_genes(self):
+        # global GENES
+        # gene = random.choice(GENES)
+        # return gene
+        unvisited = set(range(len(TARGET)))
+        global truck, drone
+        if len(l):
+            unvisited.remove(self.chromosome[-1])
+            if transportation_array[self.chromosome[-1]] == 1:
+                truck_unvisited = [i for i in unvisited if i in truck and transportation_array[i]==1 or transportation_array[i] == 3]
+                drone_unvisited = [i for i in unvisited if i in drone and transportation_array[i] == 1 or transportation_array[i]==3]
+                a = random.choice(truck_unvisited)
+                b = random.choice(drone_unvisited)
+                return random.choice([a, b])
+            elif transportation_array[self.chromosome[-1]] == 2:
+                truck_unvisited = [i for i in unvisited if i in truck and transportation_array[i] == 3]
+                drone_unvisited = [i for i in unvisited if i in drone and transportation_array[i] == 3]
+                a = random.choice(truck_unvisited)
+                b = random.choice(drone_unvisited)
+                return random.choice([a, b])
+            elif transportation_array[self.chromosome[-1]] == 3:
+                truck_unvisited = [i for i in unvisited if i in truck and transportation_array[i] != 1]
+                drone_unvisited = [i for i in unvisited if i in drone and transportation_array[i] != 1]
+                a = random.choice(truck_unvisited)
+                b = random.choice(drone_unvisited)
+                return random.choice([a, b])
+            else:
+                truck_unvisited = [i for i in unvisited if i in truck and transportation_array[i] == 3 or transportation_array[i] == 2]
+                drone_unvisited = [i for i in unvisited if i in drone and transportation_array[i] == 2 or transportation_array[i] == 3]
+                a = random.choice(truck_unvisited)
+                b = random.choice(drone_unvisited)
+                return random.choice([a, b])
+        else:
+            a = random.choice(truck)
+            b = random.choice(drone)
+            return random.choice([a, b])                
+
+    @classmethod
+    def create_gnome(self):
+        global TARGET
+        gnome_len = len(TARGET)
+        return [self.mutate_genes() for _ in range(gnome_len)]
+
+    def mate(self, par2):
+        child_chromosome = []
+        for gp1, gp2 in zip(self.chromosome, par2.chromosome):
+            prob =  random.random()
+            if prob < 0.45:
+                child_chromosome.append(gp1)
+            elif prob < 0.90:
+                child_chromosome.append(gp2)
+            else:
+                child_chromosome.append(self.mutate_genes())
+        return Genetic(child_chromosome)
+    
+    def cal_fitness(self):
+        global TARGET
+        fitness = 0
+        for gs, gt in zip(self.chromosome, TARGET):
+            if gs != gt: fitness += 1
+        return fitness
+
+
 def tsp(i, start, s):
     if len(s) == 0:
         return [start], distance_matrix[i][start]
@@ -117,6 +198,52 @@ def tsp(i, start, s):
             path = rpath
     return path, ans
 
+
+generation = 1
+found = False
+population = []
+
+for _ in range(POPULATION_SIZE):
+    gnome = Genetic.create_gnome()
+    population.append(Genetic(gnome))
+
+
+for i in population:
+    print(i)
+
+# while not found:
+#     population = sorted(population, key=lambda x:x.fitness)
+#     if population[0].fitness <= 0:
+#         found = True
+#         break
+#     new_generation = []
+#     s = int((10*POPULATION_SIZE)/100)
+#     new_generation.extend(population[:s])
+#     s = int((90*POPULATION_SIZE)/100)
+#     for _ in range(s):
+#         parent1 = random.choice(population[:50])
+#         parent2 = random.choice(population[:50])
+#         child = parent1.mate(parent2)
+#         new_generation.append(child)
+#     population = new_generation
+#     print("Generation: {}\tPath: {}\tFitness: {}".format(generation, 
+# 		(population[0].chromosome), 
+# 		population[0].fitness)) 
+#     generation += 1
+
+# print("Generation: {}\tPath: {}\tFitness: {}".format(generation, 
+# 		(population[0].chromosome), 
+# 		population[0].fitness)) 
+
+# start = 0
+# tsp_set = set(range(len(old_population)))
+# tsp_set.remove(start)
+# path, cost = tsp(start, start, tsp_set)
+# tsp_set.add(start)
+
+# path.append(start)
+# print(f"Path: {path}")
+# print(f"Cost: {cost}")
 
 class AntColony:
     def __init__(self,distances, n_ants, decay, alpha, beta, speed) -> None:
@@ -170,7 +297,7 @@ class AntColony:
                 new_unvisited = list(filter(lambda x: transportation_array[x]!=1,unvisited))
             else:
                 new_unvisited = list(filter(lambda x:transportation_array[x]==3 or transportation_array[x]==2, unvisited))
-            
+            next_city = self.choose_next_city(ant_path[-1], unvisited)
             next_city = None
             if len(new_unvisited):
                 next_city = self.choose_next_city(ant_path[-1], new_unvisited)
@@ -240,29 +367,51 @@ def Total_cost(path, Tcost, Dcost):
             total_cost += max(Tcost[path[i]][path[i+1]], Dcost[path[i]][path[i+1]])
     return total_cost
 
-Truck = AntColony(distance_matrix, 5, decay, alpha, beta, Ts)
-Drone = AntColony(distance_matrix, 5, decay, alpha, beta, Ds)
+Truck = AntColony(distance_matrix, 2, decay, alpha, beta, Ts)
+Drone = AntColony(distance_matrix, 2, decay, alpha, beta, Ds)
 
-best_truck_path, best_truck_time = Truck.run(100)
-best_drone_path, best_drone_time = Drone.run(100)
+# best_truck_path, best_truck_time = Truck.run(100)
+# best_drone_path, best_drone_time = Drone.run(100)
 
-fitness_truck = fitness_measurement(best_truck_path, Truck.tcost, Drone.tcost)
-fitness_drone = fitness_measurement(best_drone_path, Truck.tcost, Drone.tcost)
+# fitness_truck = fitness_measurement(best_truck_path, Truck.tcost, Drone.tcost)
+# fitness_drone = fitness_measurement(best_drone_path, Truck.tcost, Drone.tcost)
 
-truck_type = Type_Matrix(best_truck_path)
-drone_type = Type_Matrix(best_drone_path)
+# truck_type = Type_Matrix(best_truck_path)
+# drone_type = Type_Matrix(best_drone_path)
 
-TotalCost = Total_cost(best_truck_path, Truck.tcost, Drone.tcost)
-Totalcost1 = Total_cost(best_drone_path, Truck.tcost, Drone.tcost)
+# TotalCost = Total_cost(best_truck_path, Truck.tcost, Drone.tcost)
+# Totalcost1 = Total_cost(best_drone_path, Truck.tcost, Drone.tcost)
 
-print(f"Best Truck time: {best_truck_time} s")
-print(f"Best Truck Path: {best_truck_path}")
-print(f"Truck Fitness: {fitness_truck}")
-print(f"Truck Type Matrix: {truck_type}")
-print(f"Total cost if we take Truck path: {TotalCost}")
-print()
-print(f"Best Drone time: {best_drone_time} s")
-print(f"Best Drone path: {best_drone_path}")
-print(f"Drone Fitness: {fitness_drone}")
-print(f"Drone Type Matrix: {drone_type}")
-print(f"Total cost if we take drone path: {Totalcost1}")
+# print(f"Best Truck time: {best_truck_time} s")
+# print(f"Best Truck Path: {best_truck_path}")
+# print(f"Truck Fitness: {fitness_truck}")
+# print(f"Truck Type Matrix: {truck_type}")
+# print(f"Total cost if we take Truck path: {TotalCost}")
+# print()
+# # print(f"Best Drone time: {best_drone_time} s")
+# print(f"Best Drone path: {best_drone_path}")
+# print(f"Drone Fitness: {fitness_drone}")
+# print(f"Drone Type Matrix: {drone_type}")
+# print(f"Total cost if we take drone path: {Totalcost1}")
+
+
+# print(f"Truck pheromone matrix: {Truck.pheromone}")
+
+
+
+truck_paths = []
+drone_paths = []
+
+# for itr in range(100):
+#     best_truck_path, best_truck_time = Truck.run(100)
+#     best_drone_path, best_drone_time = Drone.run(100)
+#     if best_truck_path in truck_paths:
+#         continue
+#     truck_paths.append(best_truck_path)
+#     if best_drone_path in drone_paths:
+#         continue
+#     drone_paths.append(best_drone_path)
+
+# print(truck_paths)
+# print(drone_paths)
+
