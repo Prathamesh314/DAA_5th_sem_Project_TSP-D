@@ -76,45 +76,13 @@ def choose_next_city(current_city, unvisited):
             d_tij = drnephmtrix[current_city][j]
             d_ij = distance_matrix[current_city][j]
             pheromone_values[current_city][j] = (d_tij ** alpha) * (d_ij ** beta)
-    # for i in range(len(pheromone_values)):
-    #     for j in range(len(pheromone_values[0])):
-    #         if transportation_array[current_city] != 1:
-    #             j1 = random.choice(truck)
-    #             j2 = random.choice(drone)
-    #             n = random.choice([0, 1])
-    #             if not n:
-    #                 p_tij = trckphmtrix[current_city][j1]
-    #                 d_ij = distance_matrix[current_city][j1]
-    #                 pheromone_values[i][_] = (p_tij ** alpha) * (d_ij ** beta)
-    #             else:
-    #                 d_tij = drnephmtrix[current_city][j2]
-    #                 d_ij = distance_matrix[current_city][j2]
-    #                 pheromone_values[i][_] = (d_tij ** alpha) * (d_ij ** beta)
-    #         else:
-    #             tj = random.choice(truck)
-    #             p_tij = trckphmtrix[current_city][tj]
-    #             d_ijt = distance_matrix[current_city][tj]
-    #             pheromone_values[i][_] = (p_tij ** alpha) * (d_ijt ** beta)
-
-
-            # if j in truck:
-            #     p_tij = trckphmtrix[i][j]
-            #     d_ij = distance_matrix[i][j]
-            #     pheromone_values[i][j] = (p_tij ** alpha) * (d_ij ** beta)
-            # else:
-            #     d_tij = drnephmtrix[i][j]
-            #     d_ij = distance_matrix[i][j]
-            #     pheromone_values[i][j] = (d_tij ** alpha) * (d_ij ** beta)
 
     arr_sum = 0
     for i in range(len(pheromone_values)):
         for j in range(len(pheromone_values[0])):
             arr_sum += pheromone_values[i][j]
-    # if arr_sum == 0:
-    #
-    #     print(current_city, arr_sum)
+
     probabilities = pheromone_values * (1 / (arr_sum if arr_sum > 0 else 10**5))
-    # print(pheromone_values)
     r = random.random()
     next_city = None
     cummulative_sum = 0
@@ -124,7 +92,6 @@ def choose_next_city(current_city, unvisited):
             if cummulative_sum >= r and j != current_city and j in unvisited:
                 next_city = j
                 break
-    # print(next_city)
     return next_city
 
 
@@ -136,36 +103,24 @@ def AS_Algo(start):
 
     while len(unvisited):
         new_unvisited = []
-        # If current_city is of type 2, 3 or 4 then possible candidate for next_city is truck or dron
-        if transportation_array[ant_path[-1]] != 1:
-            new_unvisited = unvisited
+
+        if transportation_array[ant_path[-1]] == 1:
+            new_unvisited = list(
+                filter(lambda x: transportation_array[x] == 1 or transportation_array[x] == 3, unvisited))
+        elif transportation_array[ant_path[-1]] == 2:
+            new_unvisited = list(filter(lambda x: transportation_array[x] == 3, unvisited))
+        elif transportation_array[ant_path[-1]] == 3:
+            new_unvisited = list(filter(lambda x: transportation_array[x] != 1, unvisited))
         else:
-            # else possible candidate for next_city is only truck
-            for j in unvisited:
-                if j in truck:
-                    new_unvisited.append(j)
-        # if transportation_array[ant_path[-1]] == 1:
-        #     new_unvisited = list(
-        #         filter(lambda x: transportation_array[x] == 1 or transportation_array[x] == 3, unvisited))
-        # elif transportation_array[ant_path[-1]] == 2:
-        #     new_unvisited = list(filter(lambda x: transportation_array[x] == 3, unvisited))
-        # elif transportation_array[ant_path[-1]] == 3:
-        #     new_unvisited = list(filter(lambda x: transportation_array[x] != 1, unvisited))
-        # else:
-        #     new_unvisited = list(
-        #         filter(lambda x: transportation_array[x] == 3 or transportation_array[x] == 2, unvisited))
-        next_city = choose_next_city(ant_path[-1], new_unvisited)
+            new_unvisited = list(
+                filter(lambda x: transportation_array[x] == 3 or transportation_array[x] == 2, unvisited))
+        print(new_unvisited, unvisited)
+        next_city = choose_next_city(ant_path[-1], new_unvisited if len(new_unvisited) else unvisited)
         if next_city is None:
             return [], 10**5
         ant_path.append(next_city)
         unvisited.remove(next_city)
 
-    # Update pheromone matrices
-    # for i in range(len(ant_path) - 1):
-    #     if ant_path[i] in truck and ant_path[i + 1] in truck:
-    #         trckphmtrix[ant_path[i]][ant_path[i + 1]] *= (1 - decay)
-    #     elif ant_path[i] in drone and ant_path[i + 1] in drone:
-    #         drnephmtrix[ant_path[i]][ant_path[i + 1]] *= (1 - decay)
 
     return ant_path, fitness_measurement(ant_path)
 
@@ -186,12 +141,6 @@ def mate(parent1, parent2):
             child_chromosome.append(random.randint(0, 9))
     return child_chromosome
 
-#
-# def mutation(chromosome):
-#     for i in range(maximum_number_of_mutation):
-#         index = random.randint(0, len(chromosome) - 1)
-#         chromosome[index][i] = random.randint(0, 9)
-#     return chromosome
 
 
 all_paths = []
@@ -214,11 +163,6 @@ for i in range(maxitr):
         parent2 = random.choice(all_paths)
         child = mate(parent1[0], parent2[0])
         new_generation.append((child, fitness_measurement(child)))
-
-    # Mutation
-    # for i in range(maximum_number_of_mutation):
-    #     mutated_child = mutation(random.choice(new_generation))
-    #     new_generation.append(mutated_child)
 
     all_paths = new_generation
 
