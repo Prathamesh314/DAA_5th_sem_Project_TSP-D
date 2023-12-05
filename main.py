@@ -9,8 +9,9 @@ tsp_set = set(range(len(population)))
 Ts = 10  # Speed of Truck
 Ds = 20  # Speed of Drone
 alpha = 1  # GA-AS constant
-beta = 1  # GA-AS constant
+beta = 3  # GA-AS constant
 decay = 0.95  # GA-AS constant
+
 # Created distance matrix for 10 customers
 ditances_matrix = np.array([
     [0, 29, 20, 21, 16, 31, 100, 12, 4, 31],

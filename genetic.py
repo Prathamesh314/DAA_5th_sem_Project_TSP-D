@@ -8,6 +8,8 @@ GENES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 TARGET = [0, 8, 7, 2, 1, 6, 5, 9, 3, 4, 0]
 
+s = set(range(len(TARGET)-1))
+
 # old_population = [0, 0, 0, 0, 0, 1, 1, 1, 0, 0]
 
 distance_matrix = np.array([
@@ -77,6 +79,12 @@ def tsp(i, start, s):
             path = rpath
     return path, ans
 
+# Calling tsp to find best path
+s.remove(0)
+path, cost = tsp(0, 0, s)
+path.append(0)
+print(f"Best path: {path}")
+print(f"Best Price: {cost}")
 
 generation = 1
 found = False
